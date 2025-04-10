@@ -18,6 +18,7 @@ INTERACTIONS_LOG_PATH = os.path.join(BASE_DIR, 'interactions_log.csv')
 USER_PREFS_PATH = os.path.join(BASE_DIR, 'user_preferences.csv')
 DASHBOARD_PATH = os.path.join(BASE_DIR, 'user_metrics.png')
 NETWORK_PATH = os.path.join(BASE_DIR, 'user_item_network.png')
+PRECISION_HIST_PATH = os.path.join(BASE_DIR, 'precision_histogram.png')
 
 # 2. Enhanced data loading with validation
 def load_user_preferences():
@@ -120,102 +121,45 @@ def generate_dashboard(save_path=DASHBOARD_PATH):
     except Exception as e:
         logger.error(f"Dashboard generation failed: {str(e)}", exc_info=True)
 
+# 4. Calculate Precision@k based on existing interaction data
+def calculate_precision_at_k(user_prefs, k=5):
+    precision_scores = []
+    for user_id, prefs in user_prefs.items():
+        top_k = prefs['likes'][:k] + prefs['dislikes'][:max(0, k - len(prefs['likes']))]
+        relevant = set(prefs['likes'])
+        true_positives = sum(1 for item in top_k if item in relevant)
+        precision = true_positives / k if k > 0 else 0
+        precision_scores.append(precision)
+        logger.debug(f"User {user_id} - Precision@{k}: {precision:.2f}")
+    if precision_scores:
+        average_precision = sum(precision_scores) / len(precision_scores)
+        logger.info(f"Calculated average Precision@{k}: {average_precision:.4f}")
+        plt.figure(figsize=(8, 6))
+        plt.hist(precision_scores, bins=10, range=(0, 1), edgecolor='black', alpha=0.75)
+        plt.title(f"Precision@{k} Distribution Across Users")
+        plt.xlabel("Precision@K Score")
+        plt.ylabel("Number of Users")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(PRECISION_HIST_PATH)
+        logger.info(f"Precision@{k} histogram saved to {PRECISION_HIST_PATH}")
+        return average_precision
+    else:
+        logger.warning("No users to calculate Precision@K.")
+        return 0.0
+
 # Rest of your functions (visualize_connections, export_to_csv) remain similar
 # but should use the consistent paths defined above
 
 if __name__ == '__main__':
     try:
         logger.info("Starting monitoring process with enhanced validation...")
-        
-        # Data validation checkpoint
         logger.debug(f"User preferences count: {len(user_preferences)}")
         logger.debug(f"Sample user data: {dict(list(user_preferences.items())[:1])}")
-        
+
         generate_dashboard()
-        # visualize_connections()
-        # export_to_csv()
-        
-        logger.info("Monitoring completed with validation")
+        avg_precision = calculate_precision_at_k(user_preferences, k=5)
+        logger.info(f"Final Precision@5 across users: {avg_precision:.4f}")
+
     except Exception as e:
         logger.error(f"Monitoring failed: {str(e)}", exc_info=True)
-
-# test_cases.py
-# import pytest
-# from app import app, preference_model, user_preferences, calculate_precision_at_k
-# import json
-
-# # Test client setup
-# @pytest.fixture
-# def client():
-#     app.config['TESTING'] = True
-#     with app.test_client() as client:
-#         yield client
-
-# # Test data
-# TEST_USER = "e0aTZkpTnsSsvHpRMIFWm2UguJM2"
-# TEST_PRODUCT_LIKE = "B001G8XYFS"
-# TEST_PRODUCT_DISLIKE = "B00008JOMD"
-
-# def test_like_product(client):
-#     """Test that liking a product works and updates recommendations"""
-#     # Initial like
-#     response = client.post('/like_product', 
-#         json={'user_id': TEST_USER, 'product_id': TEST_PRODUCT_LIKE})
-    
-#     assert response.status_code == 200
-#     data = json.loads(response.data)
-    
-#     # Check response structure
-#     assert data['status'] == "success"
-#     assert "recommendations" in data
-    
-#     # Verify user preferences updated
-#     assert TEST_USER in user_preferences
-#     assert TEST_PRODUCT_LIKE in user_preferences[TEST_USER]['likes']
-
-# def test_recommendations_after_like(client):
-#     """Test recommendations change after liking a product"""
-#     # Get initial recommendations
-#     initial_recs = preference_model.predict_preference(TEST_USER)
-    
-#     # Like a product
-#     client.post('/like_product', 
-#         json={'user_id': TEST_USER, 'product_id': TEST_PRODUCT_LIKE})
-    
-#     # Get updated recommendations
-#     updated_recs = preference_model.predict_preference(TEST_USER)
-    
-#     # Recommendations should change (at least 1 new item)
-#     assert len(set(updated_recs) - set(initial_recs)) > 0
-
-# def test_dislike_filtering(client):
-#     """Test disliked products don't appear in recommendations"""
-#     # Dislike a product
-#     client.post('/dislike_product', 
-#         json={'user_id': TEST_USER, 'product_id': TEST_PRODUCT_DISLIKE})
-    
-#     # Get recommendations
-#     recs = preference_model.predict_preference(TEST_USER)
-    
-#     # Verify disliked item not in recommendations
-#     assert TEST_PRODUCT_DISLIKE not in recs
-
-# def test_new_user_recommendations():
-#     """Test new users get reasonable default recommendations"""
-#     recs = preference_model.predict_preference("brand_new_user")
-#     assert len(recs) > 0  # Should get some recommendations
-#     assert all(isinstance(item, str) for item in recs)  # All should be product IDs
-
-# def test_precision_calculation():
-#     """Test recommendation quality metric"""
-#     # Simulate user with 5 liked products
-#     user_preferences["metric_test_user"] = {
-#         'likes': ['P1', 'P2', 'P3', 'P4', 'P5'],
-#         'dislikes': []
-#     }
-    
-#     # Mock recommendations (3/5 are good)
-#     preference_model.predict_preference = lambda user_id, k=5: ['P1', 'P3', 'P5', 'P7', 'P9']
-    
-#     precision = calculate_precision_at_k("metric_test_user", k=5)
-#     assert precision == 0.6  # 3/5 correct

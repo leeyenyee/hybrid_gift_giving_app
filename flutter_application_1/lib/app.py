@@ -46,7 +46,8 @@ def load_user_preferences():
                 else:
                     user_preferences[user_id]['dislikes'].append(row['product_id'])
     except FileNotFoundError:
-        pass  # First run, file doesn't exist yet
+        pass 
+    
 load_user_preferences()
 
 def generate_embeddings():
@@ -73,24 +74,22 @@ def generate_embeddings():
 try:
     df = pd.read_csv("C:\\Users\\leeye\\A_LYY\\1_FYP\\lucky\\flutter_application_1\\lib\\dataset.csv")
     
-    # Try loading pre-embedded file first
     embedding_path = "C:\\Users\\leeye\\A_LYY\\1_FYP\\lucky\\flutter_application_1\\lib\\amazon_with_embeddings.csv"
     if os.path.exists(embedding_path):
         amazon_df = pd.read_csv(embedding_path)
-        # Convert string representation of embeddings back to arrays
         amazon_df['embedding'] = amazon_df['embedding'].apply(
             lambda x: np.fromstring(x.strip("[]"), sep=" ") if isinstance(x, str) else x
         )
         logging.info("Loaded pre-computed embeddings")
     else:
         amazon_df = pd.read_csv("C:\\Users\\leeye\\A_LYY\\1_FYP\\lucky\\flutter_application_1\\lib\\Amazon products global dataset.csv")
-        # Initialize the SentenceTransformer model if not already initialized
+        # Initialize the SentenceTransformer model 
         if 'model' not in globals():
             model = SentenceTransformer('all-MiniLM-L6-v2')
             logging.info("SentenceTransformer model initialized.")
 
         if model is not None:
-            generate_embeddings()  # Your embedding generation function
+            generate_embeddings()  
 except Exception as e:
     logging.error(f"Data loading failed: {e}")
     df = pd.DataFrame()
@@ -121,14 +120,12 @@ try:
             
             amazon_df['embedding'] = embeddings
             
-            # Save embeddings for future use
             embedding_path = "C:\\Users\\leeye\\A_LYY\\1_FYP\\lucky\\flutter_application_1\\lib\\amazon_with_embeddings.csv"
             amazon_df.to_csv(embedding_path, index=False)
             logging.info(f"Embeddings generated and saved to {embedding_path}")
         else:
             logging.info("Embeddings already exist in the dataset")
             
-        # Verify embeddings
         if 'embedding' in amazon_df.columns:
             logging.info(f"Embedding check: First embedding length = {len(amazon_df.iloc[0]['embedding'])}")
             
@@ -151,6 +148,7 @@ interest_to_department = {
     "Music": ["Musical Instruments, Stage & Studio", "Headphones, Earphones & Accessories"],
     "Entertainment": ["Video Games", "Electronics", "Toys & Games"]
 }
+
 #for helpful? if user input helpful = like product 
 @app.route('/like_product', methods=['POST'])
 def like_product():
@@ -159,7 +157,7 @@ def like_product():
         user_id = data['user_id']
         product_id = data['product_id']
         
-        # PROPER way to track interaction - pass a dictionary
+        # track interaction - pass a dictionary
         track_interaction({
             'user_id': user_id,
             'product_id': product_id, 
@@ -180,7 +178,6 @@ def like_product():
             user_preferences[user_id] = {'likes': [], 'dislikes': []}
         user_preferences[user_id]['likes'].append(product_id)
         
-        # SUCCESS response with all details
         return jsonify({
             "status": "success",
             "message": "Product liked successfully!",
@@ -206,7 +203,7 @@ def like_product():
             "status": "partial_success",
             "message": "Feedback recorded but some processing failed",
             "error": str(e)
-        }), 207  # Using 207 Multi-Status to indicate partial success
+        }), 207 
 
 # Not helpful 
 @app.route('/dislike_product', methods=['POST'])
@@ -250,14 +247,13 @@ def dislike_product():
     except Exception as e:
         logging.error(f"Error in /dislike_product: {str(e)}")
         return jsonify({
-            "status": "success",  # Still success to user
+            "status": "success", 
             "message": "Feedback recorded (learning pending)",
             "error": str(e)
         })  
 
 def build_interaction_matrix():
     """Convert user interactions to a sparse matrix"""
-    
     
     all_users = list(user_interactions.keys())
     all_items = list(item_popularity.keys())
@@ -315,7 +311,7 @@ def recommend():
         if not data:
             return jsonify({"error": "No data provided"}), 400
 
-        # Extract and validate parameters (existing filter logic)
+        # extract input from existing filter logic
         occasion = data.get("occasion")
         gender = data.get("gender")
         age_range = data.get("age_range")
@@ -347,7 +343,6 @@ def recommend():
                     return True
 
             return True
-
 
         def filter_products(products, filters):
             filtered = []
@@ -449,7 +444,7 @@ def recommend_random_products():
                         # Remove any non-numeric characters (e.g., currency symbols, quotes)
                         price_str = ''.join(filter(lambda x: x.isdigit() or x == '.', price_val))
                         price = float(price_str)
-                else:  # It's already a number (float/int)
+                else: 
                     price = float(price_val)
             except (ValueError, TypeError) as e:
                 logging.warning(f"Invalid price value: {row.get('initial_price')}. Defaulting to 0.0. Error: {e}")
@@ -469,13 +464,13 @@ def recommend_random_products():
                         # Remove any non-numeric characters (e.g., quotes, text)
                         rating_str = ''.join(filter(lambda x: x.isdigit() or x == '.', rating_val))
                         rating = float(rating_str)
-                else:  # It's already a number (float/int)
+                else: 
                     rating = float(rating_val)
             except (ValueError, TypeError) as e:
                 logging.warning(f"Invalid rating value: {row.get('rating')}. Defaulting to 0.0. Error: {e}")
                 rating = 0.0
 
-            category = row.get("department", "Unknown Category")  # Use "department" as category
+            category = row.get("department", "Unknown Category") 
             product = {
                 "Product Name": row.get("title", "Unknown Product"),
                 "department": category,
@@ -512,10 +507,8 @@ def fetch_random_recommendations(limit=10):
         # Combine random and trending products
         recommendations = pd.concat([random_products, trending_products]).drop_duplicates(subset=['asin']).head(limit)
 
-        # Prepare the response
         recommendations_list = []
         for _, row in recommendations.iterrows():
-            # Convert features to a string if it's a list
             features = row.get("features", [])
             if isinstance(features, list):
                 features = " ".join(features)
@@ -528,7 +521,7 @@ def fetch_random_recommendations(limit=10):
                 "price": float(row.get("final_price", 0.0)) if pd.notna(row.get("final_price")) else 0.0,
                 "Rating": float(row.get("rating", 0.0)) if pd.notna(row.get("rating")) else 0.0,
                 "Popularity": row.get("reviews_count", 0.0) if pd.notna(row.get("reviews_count")) else 0,
-                "features": features,  # Use features as a string
+                "features": features,  
             })
 
         return recommendations_list
@@ -592,7 +585,7 @@ def fetch_personalized_recommendations(data, recent_departments):
         filtered_df = df.copy()
 
         if occasion:
-            if isinstance(occasion, list):  # Handle list of occasions
+            if isinstance(occasion, list):
                 filtered_df = filtered_df[filtered_df['Occasion'].isin(occasion)]
             else:
                 filtered_df = filtered_df[filtered_df['Occasion'].str.contains(occasion, case=False, na=False)]
@@ -930,6 +923,7 @@ def more_related():
 
 user_click_counts = defaultdict(lambda: defaultdict(int))
   
+# allow device to receive notifications for the calendar special events
 @app.route('/send-notification', methods=['POST'])
 def send_notification():
     try:
@@ -941,7 +935,6 @@ def send_notification():
         if not token or not title or not body:
             return jsonify({'error': 'Missing parameters'}), 400
 
-        # FCM server key
         server_key = 'fqp701otSZ-phpTGxB2N5e:APA91bF4u5MYXsqng0RhdsfEqU8DHTu_vz4O4tzD3Kmbgc5qo6c2ev49qmamYSzANU_yofk3t5THH4HMjQBBx6nO7mAlnqaXQi9XceWmwqQd63-GDDh_5Ls'
         url = 'https://fcm.googleapis.com/fcm/send'
         headers = {
@@ -971,8 +964,7 @@ def send_notification():
         print(f"Error sending notification: {e}")
         return jsonify({'error': str(e)}), 500
 
-# Enhanced data structures
-interaction_log = []  # Define interaction_log as a list to store interaction logs
+interaction_log = [] 
 user_profiles = defaultdict(lambda: {
     'department_affinity': defaultdict(float),
     'click_history': deque(maxlen=100),
@@ -980,7 +972,6 @@ user_profiles = defaultdict(lambda: {
     'last_active': None
 })
 
-# Add to your existing data structures
 user_interactions = defaultdict(dict)  
 item_popularity = defaultdict(int)    
 
@@ -1016,7 +1007,6 @@ def calculate_precision_at_k(user_id, k=5):
     if user_id not in user_preferences:
         return 0.0
     
-    # Get user's liked items
     user_likes = set(user_preferences[user_id]['likes'])
     
     # Get top k recommendations
@@ -1226,7 +1216,6 @@ def user_metrics(user_id):
             
 class PreferenceModel:
     def __init__(self):
-        # Initialize with a simple model that can be updated online
         self.model = make_pipeline(
             TfidfVectorizer(max_features=5000),
             PassiveAggressiveClassifier()
@@ -1290,7 +1279,6 @@ def debug_user(user_id):
         ]
     })
 
-#  Initialize the model
 preference_model = PreferenceModel()
 
 if __name__ == '__main__':    
