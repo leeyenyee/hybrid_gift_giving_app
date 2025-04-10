@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "291250550268",
+    "project_id": "gifting-e3708",
+    "storage_bucket": "gifting-e3708.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:291250550268:android:d54c165c4156b8df53ee79",
+        "android_client_info": {
+          "package_name": "Giftyy_Firebase.My"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRhWBXD2llVK6iHDLtKEOCSKaUpwv1-Pg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:291250550268:android:0d254b8020ae124953ee79",
+        "android_client_info": {
+          "package_name": "com.example.g1ft_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRhWBXD2llVK6iHDLtKEOCSKaUpwv1-Pg"
+        }
+      ],
+      "services": {
+        "appinvite_service": { 
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
